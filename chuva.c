@@ -20,7 +20,7 @@ char** partes(char *linha){
 }
 
 typedef struct row{
-    char local[4];
+    char local[11];
     int ano;
     int dia;
     int hora;
@@ -41,8 +41,7 @@ void printRowp(struct row *r){
 struct row *novaRow(char *linha){
     struct row *nova = (struct row *) malloc(sizeof(struct row));
     char **colunas = partes(linha);
-    strncpy(nova->local,colunas[0],3);
-    nova->local[3]='\0'; 
+    strncpy(nova->local,colunas[0],11);
     nova->ano = atoi(colunas[1]);
     nova->dia = atoi(colunas[2]);
     nova->hora = atoi(colunas[3]);
@@ -69,32 +68,28 @@ int main(){
             printf("\r%d%%",100*indice/total_linhas);
         if(dados[indice]->chuva>1){
             double media = dados[indice]->p_atual;
-            double medidasComChuva = 1;
+            int medidasComChuva = 1;
             //antes
-            for(int j=indice-1;j>=0;j--){
-                if(dados[j]->chuva<=1){
-                    dados[indice]->p_antes = dados[j]->p_atual;
-                    break;
-                }
-            }
+            dados[indice]->p_antes = dados[indice-1]->p_atual;
             //depois
-            for(int j=indice+1;j<total_linhas;j++){
-                if(dados[j]->chuva>1){
-                    media+=dados[j]->p_atual;
-                    medidasComChuva++;
-                }else{
-                    dados[indice]->p_depois=dados[j]->p_atual;
-                    break;
-                }
+            while(dados[indice+medidasComChuva]->chuva>1){
+                media+=dados[indice+medidasComChuva]->p_atual;
+                medidasComChuva++;
             }
+	    dados[indice]->p_depois = dados[indice+medidasComChuva]->p_atual;
+	    //atual
             dados[indice]->p_atual = media/medidasComChuva;
+	    //arquivo
             fprintf(saida,
-                    "%s,%d,%.3lf,%.3lf,%.3lf\n",
+                    "%s,%d,%d,%g,%g,%g\n",
                     dados[indice]->local,
                     dados[indice]->hora,
+		    medidasComChuva,
                     dados[indice]->p_antes,
                     dados[indice]->p_atual,
                     dados[indice]->p_depois);
+	    //pula horas já consideradas
+	    indice+=medidasComChuva-1;
         }
     }
     
