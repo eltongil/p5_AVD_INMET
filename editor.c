@@ -5,47 +5,6 @@
 
 #define M_PI 3.14159265358979323846
 
-struct seta{    
-    double pontos[6];    
-    int dia;
-};
-struct entidade{
-    char cidade[11];
-    int hora;
-    double antes;
-    double durante;
-    double depois;};
-
-void printEntidade(struct entidade e){
-    printf("\ncidade: %s\nhora: %d\nantes: %.2lf\ndurante: %.2lf\ndepois: %.2lf\n", 
-    e.cidade,e.hora,e.antes,e.durante,e.depois);
-}
-
-struct entidade gerarEntidade(char *linha){
-    struct entidade temp;
-    sscanf(linha,"%s,%d,%lf,%lf,%lf\n",
-        &temp.cidade,
-        &temp.hora,
-        &temp.antes,
-        &temp.durante,
-        &temp.depois
-    );
-    return temp;
-}
-
-double valores[8][24][3];
-
-int indiceDaCidade(char nome[11]){
-    if(strcmp(nome,"APODI")==0) return 0;
-    if(strcmp(nome,"MOSSORO")==0) return 1;
-    if(strcmp(nome,"CAICO")==0) return 2;
-    if(strcmp(nome,"IPANGUACU")==0) return 3;
-    if(strcmp(nome,"MACAU")==0) return 4;
-    if(strcmp(nome,"SANTA CRUZ")==0) return 5;
-    if(strcmp(nome,"CALCANHAR")==0) return 6;
-    if(strcmp(nome,"NATAL")==0) return 7;
-}
-
 const double coordenadas[8][2]={
     {227.0,297.0},
     {374.0,210.0},
@@ -57,35 +16,92 @@ const double coordenadas[8][2]={
     {940.0,368.0}
 };
 
-void gerarElementos(FILE *origem,char tipo){
-    char linha[500];
-    FILE *info = fopen("tratados.csv","r");
+void marcarCidades(){
+    printf("\t\t<g id=\"marcas\" stroke=\"black\" fill=\"red\" stroke-width=\"1\";>");
+    for(int i=0;i<8;i++){
+        printf("\t\t\t<circle cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
+        coordenadas[i][0],
+        coordenadas[i][1],
+        10);
+    }
+    printf("\t\t</g>\n");
+}
 
-    while(fgets(linha,500,origem)!=NULL){
-        if(contem(linha,'@')){
-            while(fgets(linha,50,info)!=NULL){
-                struct entidade ent = gerarEntidade(linha);
-                if(tipo=='m'){
-                    printf("\t\t\t\t\t\t\t");
-                    struct seta tri = gerarSeta(ent);
-                    printSeta(tri);
-                }
-                else if (tipo == 't'){
-                    struct seta tri = gerarSetaTabela(ent);
-                    printf("\t\t\t\t");
-                    printSeta(tri);
-                }
-            }            
-        }else{            
-            printf("%s",linha);
+void gerarGrades(){
+    printf("\t\t<g id=\"grades\" stroke=\"black\" stroke-width=\"1\" fill=\"none\">\n");
+    double raio = 80;
+    for(int i=0;i<8;i++){    
+        for(int raio=20;raio<=80;raio+=20){
+            printf("\t\t\t<circle cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
+            coordenadas[i][0],
+            coordenadas[i][1],
+            raio);    
+        }
+
+        for(double ang=0;ang<2*M_PI;ang+=M_PI/12){
+            printf("\t\t\t<line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n",
+            coordenadas[i][0],
+            coordenadas[i][1],
+            coordenadas[i][0] + raio*cos(ang),
+            coordenadas[i][1] + raio*sin(ang)
+            );
         }
     }
-    fclose(info);
+    printf("\t\t</g>\n");
+}
+
+void lerDados(double valores[8][3][24]){
+    FILE *dados = fopen("tratado.csv","r");    
+    int ind[3];
+    double pres[3];
+    char linha[100];
+    while(fgets(linha,100,dados)!=NULL){
+        sscanf(linha,"%d,%d,%d,%lf,%lf,%lf",
+        &ind[0],
+        &ind[1],
+        &ind[2],
+        &pres[0],
+        &pres[1],
+        &pres[2]
+        );
+        for(int i=0;i<3;i++){
+            valores[ind[0]][i][ind[1]] = pres[i] - 980;
+        }        
+    }
+    fclose(dados);
+}
+
+void gerarLinhas(){
+    double dados[8][3][24];
+    char cores[3][10] = {"red","blue","azure"};
+    lerDados(dados);
+    printf("\t\t<g id=\"linhas\" stroke-width=\"1\">\n");
+    for(int cid=0;cid<8;cid++){
+        for(int pres=0;pres<3;pres++){
+            printf("\t\t\t<polyline points=\"");
+            for(int h=0;h<24;h++){
+                printf("%g,%g ",
+                coordenadas[cid][0]+dados[cid][pres][h]*cos((M_PI/24)*h),
+                coordenadas[cid][1]+dados[cid][pres][h]*sin((M_PI/24)*h));
+            }   
+            printf("\" stroke-color=\"%s\"/>\n",cores[pres]);
+        }
+    }
+    printf("\t\t<g>\n");
 }
 
 void gerarMapa(){
-    FILE *origem = fopen("MapaChuvaPressao.html","r");
-    gerarElementos(origem,'m');
+    FILE *origem = fopen("view/index.html","r");
+    char linha[200];
+    while(fgets(linha,200,origem)!=NULL){
+        if(linha[0]=='@'){
+            marcarCidades();
+            gerarGrades();
+            gerarLinhas();
+        }else{
+            printf("%s",linha);
+        }
+    }
     fclose(origem);    
 }
 
