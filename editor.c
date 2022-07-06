@@ -20,6 +20,9 @@ void LOG(char *mensagem){
     fclose(logger);
 }
 
+char cores[3][10] = {"red","blue","gray"};
+char desc[3][8] = {"Antes","Durante","Depois"};
+
 const char cidade[8][12] ={
     "APODI",
     "MOSSORO",
@@ -43,12 +46,15 @@ const double coordenadas[8][2]={
 };
 
 void marcarCidades(){
-    printf("\t\t<g id=\"marcas\" stroke=\"black\" fill=\"red\" stroke-width=\"1\";>");
+    printf("\t\t<g id=\"marcas\" stroke=\"black\" fill=\"pink\" stroke-width=\"1\";>");
     for(int i=0;i<8;i++){
-        printf("\t\t\t<circle cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
+        printf("\t\t\t<g id=\"marca_%s\">",cidade[i]);
+        printf("\t\t\t\t<title>%s</title>\n",cidade[i]);
+        printf("\t\t\t\t<circle cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
         coordenadas[i][0],
         coordenadas[i][1],
         10);
+        printf("\t\t\t</g>");
         char msg[50];
         sprintf(msg,"Marcou cidade %d",i);
         LOG(msg);
@@ -60,17 +66,20 @@ void gerarGrades(){
     printf("\t\t<g id=\"grades\" stroke=\"black\" stroke-width=\"1\" fill=\"none\">\n");
     double raio = 80;
     for(int i=0;i<8;i++){    
-        for(int raio=20;raio<=80;raio+=20){
-            printf("\t\t\t<circle cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-            coordenadas[i][0],
-            coordenadas[i][1],
-            raio);   
+        for(int raio=20;raio<=60;raio+=10){
+            printf("\t\t\t<g id=\"raio_%d_%s\">\n",raio,cidade[i]);            
+            printf("\t\t\t\t<title>%d mBar</title>\n",980+raio*3/4);
+            printf("\t\t\t\t<circle cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
+                coordenadas[i][0],
+                coordenadas[i][1],
+                raio);   
+            printf("\t\t\t</g>\n");
             char msg[50];
             sprintf(msg,"desenhou raio %d em %d",raio,i);
             LOG(msg); 
         }
 
-        for(double ang=0;ang<6.28;ang+=M_PI/12){
+        /*for(double ang=0;ang<6.28;ang+=M_PI/12){
             printf("\t\t\t<line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n",
             coordenadas[i][0],
             coordenadas[i][1],
@@ -80,7 +89,7 @@ void gerarGrades(){
             char msg[50];
             sprintf(msg,"desenhou traco %g em %d",ang,i);
             LOG(msg);
-        }
+        }*/
     }
     printf("\t\t</g>\n");
 }
@@ -114,7 +123,7 @@ void lerDados(double valores[8][3][24]){
             ind[j]=atoi(colunas[i++]);
         }        
         for(int j=0;j<3;j++){
-            valores[ind[0]][j][ind[1]] = (atof(colunas[i++]) - 980)*2;      
+            valores[ind[0]][j][ind[1]] = (atof(colunas[i++]) - 980)*4/3;      
             char msg[50];
             sprintf(msg,"string:\t%s\tdouble:\t%g\n"
                 ,colunas[i-1]
@@ -131,6 +140,27 @@ void lerDados(double valores[8][3][24]){
     fclose(dados);
 }
 
+void marca(double x,double y,int id,double tam){
+    printf("\t\t\t\t<");
+    switch(id){
+        case 1:
+        printf("rect x=\"%g\" y=\"%g\" width=\"%g\" height=\"%g\"",x-tam/2,y-tam/2,tam,tam);
+        break;
+        case 2:
+        printf("circle cx=\"%g\" cy=\"%g\" r=\"%g\"",x,y,tam/2);
+        break;
+        case 0:        
+        printf("polygon points=\"%g,%g %g,%g %g,%g \"",
+                x+tam/2,y+tam/2,
+                x,y-tam/2,
+                x-tam/2,y+tam/2);
+        break;
+        default:
+        printf("ERRO");
+    }
+    printf("/>\n");
+}
+
 void gerarLinhas(){
     double dados[8][3][24];
     LOG("gerando linhas");
@@ -142,12 +172,10 @@ void gerarLinhas(){
         }
     }
     LOG("gerou matriz nula");
-    char cores[3][10] = {"red","blue","azure"};
     LOG("Definiu as cores");
     lerDados(dados);
-    printf("\t\t<g id=\"linhas\" fill=\"none\" stroke-width=\"2\">\n");
+    printf("\t\t<g id=\"linhas\" fill=\"none\" stroke-width=\"1\">\n");
     char markers[3][3] = {"mS","mX","mC"};
-    char desc[3][8] = {"Antes","Durante","Depois"};
     for(int cid=0;cid<8;cid++){
         for(int pres=0;pres<3;pres++){
             for(int h=0;h<24;h++){
@@ -157,27 +185,28 @@ void gerarLinhas(){
                         cid*10000+pres*100+h,
                         cidade[cid],
                         h,
-                        dados[cid][pres][h]*2+980,
-                        desc[pres]);
-                    double pos;
-                    if(h!=23 && dados[cid][pres][h+1]>0){
-                        pos = dados[cid][pres][h+1];
-                    }else if(h!=0 && dados[cid][pres][h-1]>0){
-                        pos = dados[cid][pres][h-1];
-                    }else{
-                        pos = dados[cid][pres][h];
-                    }
-                    printf("\t\t\t\t<line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\" />\n",
-                    coordenadas[cid][0]+dados[cid][pres][h]*cos((M_PI*h)/12),
-                    coordenadas[cid][1]+dados[cid][pres][h]*sin((M_PI*h)/12),
-                    coordenadas[cid][0]+pos*cos((M_PI*(h+1))/12),
-                    coordenadas[cid][1]+pos*sin((M_PI*(h+1))/12));
+                        dados[cid][pres][h]+980,
+                        desc[pres]);                    
+                    marca(  coordenadas[cid][0]+dados[cid][pres][h]*cos((M_PI*h)/12),
+                            coordenadas[cid][1]+dados[cid][pres][h]*sin((M_PI*h)/12),
+                            pres,5);
+                    printf("\t\t\t</g>\n");
                 }
-                printf("\t\t\t</g>\n");
             }   
         }
     }
-    printf("\t\t<g>\n");
+}
+
+void legenda(){
+    printf("\t\t<svg id=\"legenda\" fill=\"none\" stroke-width=\"4\">\n");
+    for(int i=0;i<3;i++){
+        printf("\t\t\t<g id=\"legenda_%s\" stroke=\"%s\">\n",desc[i],cores[i]);
+        printf("\t\t\t\t<title>%s</title>\n",desc[i]);
+        marca(30+i*70,30,i,50);
+        printf("\t\t\t\t<text text-anchor=\"middle\" x=\"%d\" y=\"70\" stroke-width=\"1\" stroke=\"black\" fill=\"black\">%s</text>\n",30+i*70,desc[i]);
+        printf("\t\t\t</g>\n");
+    }
+    printf("\t\t</svg>\n");
 }
 
 void gerarMapa(){
@@ -190,7 +219,10 @@ void gerarMapa(){
             marcarCidades();
             gerarGrades();
             gerarLinhas();
-        }else{
+        }else if(linha[0]=='_'){
+            legenda();
+        }
+        else{
             printf("%s",linha);
         }
     }

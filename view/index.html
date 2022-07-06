@@ -7,28 +7,26 @@
     <title>Chuva/Pressão</title>
 </head>
 <style>
-    div {
+    #divFisica {
         background-repeat: no-repeat;
         width: 297mm;
         height: 178mm;
         background-position-y: bottom;
         background-image: url("CamadaFisica.png");
     }
+    
+    #legenda {
+        width: 297mm;
+        height: 30mm;
+    }
 </style>
 
 <body>
+    <div id="legenda">
+_
+    </div>
     <div id="divFisica">
         <svg id="tela" width="297mm" height="210mm">
-            <marker id="mS" markerWidth="5" markerHeight="5">
-                <rect x="0" y="5" width="5" height="5" fill="none"/>
-            </marker>
-            <marker id="mX" markerWidth="5" markerHeight="5">
-                <line x1="0" y1="0" x2="5" y2="5"/>
-                <line x1="5" y1="0" x2="0" y2="5"/>
-            </marker>
-            <marker id="mC" markerWidth="5" markerHeight="5">
-                <circle x="2.5" y="2.5" r="2.5" fill="none"/>
-            </marker>
 @
         </svg>
     </div>
