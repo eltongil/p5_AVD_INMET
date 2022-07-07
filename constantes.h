@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 
-const char cores[3][10] = {"red","gray","blue"};
+const char cores[3][10] = {"blue","black","red"};
 const char desc[3][8] = {"Antes","Durante","Depois"};
 
 const char cidade[8][12] ={

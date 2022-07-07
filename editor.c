@@ -18,15 +18,15 @@ void LOG(char *mensagem){
 }
 
 void marcarCidades(){
-    printf("\t\t<g id=\"marcas\" stroke=\"black\" fill=\"pink\" stroke-width=\"1\";>");
+    printf("\t\t<g id=\"marcas\" stroke=\"gray\" fill=\"pink\" stroke-width=\"0.5\">\n");
     for(int i=0;i<8;i++){
-        printf("\t\t\t<g id=\"marca_%s\">",cidade[i]);
+        printf("\t\t\t<g id=\"marca_%s\">\n",cidade[i]);
         printf("\t\t\t\t<title>%s</title>\n",cidade[i]);
         printf("\t\t\t\t<circle cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
         coordenadas[i][0],
         coordenadas[i][1],
         10);
-        printf("\t\t\t</g>");
+        printf("\t\t\t</g>\n");
         char msg[50];
         sprintf(msg,"Marcou cidade %d",i);
         LOG(msg);
@@ -49,22 +49,35 @@ void gerarRaios(int i){
     }
 }
 
-void gerarGrades(){
-    printf("\t\t<g id=\"grades\" stroke=\"black\" stroke-width=\"1\" fill=\"none\">\n");
-    double raio = 80;
-    for(int i=0;i<8;i++){  
-        gerarRaios(i);
-        for(double ang=0;ang<6.28;ang+=M_PI/12){
-            printf("\t\t\t<line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n",
-            coordenadas[i][0],
-            coordenadas[i][1],
+void gerarTracos(int i){
+    double raio = 60;
+    for(double hora=0;hora<24;hora++){
+        double ang = (hora-6)*M_PI/12;
+        printf("\t\t<g id=\"tra%s%d\">\n",cidade[i],hora);
+        printf("<title>%g h</title>\n",hora);
+        printf("\t\t\t<line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n",
+            coordenadas[i][0] + 10*cos(ang) ,
+            coordenadas[i][1] + 10*sin(ang) ,
             coordenadas[i][0] + raio*cos(ang),
-            coordenadas[i][1] + raio*sin(ang)
-            );
-            char msg[50];
-            sprintf(msg,"desenhou traco %g em %d",ang,i);
-            LOG(msg);
+            coordenadas[i][1] + raio*sin(ang));
+        if(((int)hora)%6==0){
+            printf("<text x=\"%g\" y=\"%g\" font-family=\"sans-serif\" stroke-width=\"0\" fill=\"gray\" dominant-baseline=\"central\" text-anchor=\"middle\" font-size=\"4\">%gh</text>\n",
+                coordenadas[i][0] + (raio+7)*cos(ang),
+                coordenadas[i][1] + (raio+7)*sin(ang),
+                hora);
         }
+        printf("\t\t</g>\n");
+        char msg[50];
+        sprintf(msg,"desenhou traco %g em %d",ang,i);
+        LOG(msg);
+    }
+}
+
+void gerarGrades(){
+    printf("\t\t<g id=\"grades\" stroke=\"gray\" stroke-width=\"0.5\" fill=\"none\">\n");
+    for(int i=0;i<8;i++){  
+        //gerarRaios(i);
+        gerarTracos(i);
     }
     printf("\t\t</g>\n");
 }
@@ -98,7 +111,7 @@ void lerDados(double valores[8][3][24]){
             ind[j]=atoi(colunas[i++]);
         }        
         for(int j=0;j<3;j++){
-            valores[ind[0]][j][ind[1]] = atof(colunas[i++]) - 980.0;      
+            valores[ind[0]][j][ind[1]] = (atof(colunas[i++]) - 975.0)*1.5;      
             char msg[50];
             sprintf(msg,"string:\t%s\tdouble:\t%g\n"
                 ,colunas[i-1]
@@ -136,37 +149,66 @@ void marca(double x,double y,int id,double tam){
     printf("/>\n");
 }
 
-void radar(double x,double y,int hora,int tipo,double tam){
+void radar(double x,double y,int hora,int tipo,double tam,double diff){
     double dy = cos(M_PI*(hora-6)/12)*tam/2;
     double dx = sin(M_PI*(hora-6)/12)*tam/2;
+    double rx = cos(M_PI*(hora-6)/12)*diff*2;
+    double ry = sin(M_PI*(hora-6)/12)*diff*2;
     printf("\t\t\t\t<");
     switch (tipo){
         case 0:
             printf("line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\" ",
                 x-dx,
-                y-dy,
-                x+dx,
-                y+dy);
+                y+dy,
+                x-dx+rx,
+                y+dy+ry);
         break;
         case 1:
-            printf("line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\" ",
+            printf("line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\" stroke-width=\"0.7\"",
                 x-dx,
-                y-dy,
-                x+dy,
-                y+dx);
+                y+dy,
+                x+dx,
+                y-dy);
         break;
         case 2:
             printf("line x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\" ",
                 x+dx,
-                y+dy,
-                x-dy,
-                y-dx);
+                y-dy,
+                x+dx+rx,
+                y-dy+ry);
         break;
         default:
             printf("ERRO");
     }
     printf("/>\n");
 }
+
+void gerarTriangulos(double x,double y,int hora,int tipo,double tam,double diff){
+    if(tipo==1){
+        radar(x,y,hora,tipo,tam,diff);
+    }else{
+        double dy = cos(M_PI*(hora-6)/12)*tam/2;
+        double dx = sin(M_PI*(hora-6)/12)*tam/2;
+        double rx = cos(M_PI*(hora-6)/12)*diff*2;
+        double ry = sin(M_PI*(hora-6)/12)*diff*2;
+        printf("\t\t\t\t<polygon stroke=\"none\" fill=\"%s\"",cores[tipo]);
+        if(tipo){
+            printf("points=\"%g,%g %g,%g %g,%g\"",
+                x,y,
+                x+dx,y-dy,
+                x+dx+rx, y-dy+ry
+                );
+        }else{
+            printf("points=\"%g,%g %g,%g %g,%g\"",
+                x,y,
+                x-dx,y+dy,
+                x-dx+rx,y+dy+ry
+                );
+        }
+        printf("/>\n");
+    }
+}
+
 void gerarLinhas(int tipo){
     double dados[8][3][24];
     LOG("gerando linhas");
@@ -183,21 +225,25 @@ void gerarLinhas(int tipo){
     for(int cid=0;cid<8;cid++){
         for(int pres=0;pres<3;pres++){
             for(int h=0;h<24;h++){
-                printf("\t\t\t<g id=\"tit%06g\" stroke=\"%s\">\n",cid*10000+pres*100+h,cores[pres]);                                            
+                printf("\t\t\t<g id=\"tit%d\" stroke=\"%s\">\n",cid*10000+pres*100+h,cores[pres]);                                            
                 printf("\t\t\t\t<title>%s: %dh > %g (%s)</title>\n",                        
                     cidade[cid],
                     h,
                     dados[cid][pres][h]+980,
                     desc[pres]);   
-                double cx = coordenadas[cid][0]+dados[cid][pres][h]*cos((M_PI*(h-6))/12);
-                double cy = coordenadas[cid][1]+dados[cid][pres][h]*sin((M_PI*(h-6))/12);
+                double cx = coordenadas[cid][0]+dados[cid][1][h]*cos((M_PI*(h-6))/12);
+                double cy = coordenadas[cid][1]+dados[cid][1][h]*sin((M_PI*(h-6))/12);
+                double diff = 0;
+                if(pres!=1){
+                    diff = dados[cid][pres][h] - dados[cid][1][h];
+                }
                 if(dados[cid][pres][h]>0){   
                     switch(tipo){ 
                         case 0:                 
                             marca(cx,cy,pres,5);
                         break;
                         case 1:                            
-                            radar(cx,cy,h,pres,10);
+                            gerarTriangulos(cx,cy,h,pres,5,diff);
                         break;
                         default:                        
                     }   
@@ -206,6 +252,7 @@ void gerarLinhas(int tipo){
             }
         }
     }
+    printf("\t\t</g>\n");
 }
 
 
@@ -214,7 +261,7 @@ void legenda(){
     for(int i=0;i<3;i++){
         printf("\t\t\t<g id=\"legenda_%s\" stroke=\"%s\">\n",desc[i],cores[i]);
         printf("\t\t\t\t<title>%s</title>\n",desc[i]);
-        marca(30+i*70,30,i,50);
+        gerarTriangulos(20+i*70,50,0,i,25,25);
         printf("\t\t\t\t<text text-anchor=\"middle\" x=\"%d\" y=\"70\" stroke-width=\"1\" stroke=\"black\" fill=\"black\">%s</text>\n",30+i*70,desc[i]);
         printf("\t\t\t</g>\n");
     }
@@ -229,7 +276,7 @@ void gerarMapa(){
         if(linha[0]=='@'){
             LOG("achou o arroba");
             marcarCidades();
-            //gerarGrades();
+            gerarGrades();
             gerarLinhas(1);
         }else if(linha[0]=='_'){
             legenda();
